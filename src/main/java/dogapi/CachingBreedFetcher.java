@@ -31,30 +31,28 @@ public class CachingBreedFetcher implements BreedFetcher {
     }
 
     @Override
-    public List<String> getSubBreeds(String breed) {
-        // Null breeds are never cached; defer to underlying fetcher so tests can observe the call.
+    public List<String> getSubBreeds(String breed) throws BreedFetcher.BreedNotFoundException {
         if (breed == null) {
+            // don't cache null keys; still count the delegation for visibility in tests
             callsMade++;
-            // Let the underlying fetcher decide how to handle null (likely throws BreedNotFoundException).
             return new ArrayList<>(fetcher.getSubBreeds(null));
         }
 
         String key = breed.trim().toLowerCase(Locale.ROOT);
 
-        // Cache hit: return a defensive copy to protect internal cache.
         List<String> cached = cache.get(key);
         if (cached != null) {
+            // return a defensive copy
             return new ArrayList<>(cached);
         }
 
-        // Cache miss: delegate to underlying fetcher and record the call.
         callsMade++;
         List<String> result = fetcher.getSubBreeds(breed); // may throw BreedNotFoundException
 
-        // Store an unmodifiable copy to prevent accidental external mutation through references.
+        // Cache successful results (store unmodifiable copy internally)
         cache.put(key, Collections.unmodifiableList(new ArrayList<>(result)));
 
-        // Return a fresh copy to callers.
+        // Return a defensive copy
         return new ArrayList<>(result);
     }
 
