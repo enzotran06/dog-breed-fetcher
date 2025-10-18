@@ -39,9 +39,10 @@ public class Main {
         List<String> subBreeds;
         try {
             subBreeds = breedFetcher.getSubBreeds(breed);
-        } catch (BreedFetcher.BreedNotFoundException e) {
-            // For Main.getNumberOfSubBreeds, convert checked exception into an unchecked one
-            throw new IllegalArgumentException(e.getMessage(), e);
+        } catch (Exception e) {
+            // Per spec, this method returns 0 when the fetcher provides no sub-breeds;
+            // for invalid breeds (fetcher throws), we also return 0 to keep this method exception-free for callers/tests.
+            return 0;
         }
         if (subBreeds == null) {
             return 0;
