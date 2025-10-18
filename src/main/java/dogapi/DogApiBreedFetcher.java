@@ -30,6 +30,43 @@ public class DogApiBreedFetcher implements BreedFetcher {
         //      to refer to the examples of using OkHttpClient from the last lab,
         //      as well as the code for parsing JSON responses.
         // return statement included so that the starter code can compile and run.
-        return new ArrayList<>();
+        if (breed == null || breed.isBlank()) {
+            throw new BreedFetcher.BreedNotFoundException("Breed name must be non-empty.");
+        }
+
+        String normalized = breed.trim().toLowerCase(Locale.ROOT);
+        String url = "https://dog.ceo/api/breed/" + normalized + "/list";
+
+        OkHttpClient client = new OkHttpClient();
+        Request request = new Request.Builder().url(url).build();
+
+        try (Response response = client.newCall(request).execute()) {
+            if (!response.isSuccessful() || response.body() == null) {
+                throw new BreedFetcher.BreedNotFoundException(
+                        "Failed to fetch sub-breeds for '" + breed + "': HTTP " + (response.code()));
+            }
+
+            String responseBody = response.body().string();
+            JSONObject json = new JSONObject(responseBody);
+            String status = json.optString("status", "");
+
+            if (!"success".equalsIgnoreCase(status)) {
+                String message = json.optString("message", "Unknown error from API");
+                throw new BreedFetcher.BreedNotFoundException(message);
+            }
+
+            JSONArray arr = json.optJSONArray("message");
+            List<String> results = new ArrayList<>();
+            if (arr != null) {
+                for (int i = 0; i < arr.length(); i++) {
+                    results.add(arr.getString(i));
+                }
+            }
+            return results;
+        } catch (IOException | org.json.JSONException e) {
+            // Wrap any I/O or parsing error as BreedNotFoundException per the interface contract
+            throw new BreedFetcher.BreedNotFoundException(
+                    "Error fetching sub-breeds for '" + breed + "': " + e.getMessage());
+        }
     }
 }
